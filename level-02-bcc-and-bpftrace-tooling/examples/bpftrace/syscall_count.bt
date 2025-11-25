@@ -1,0 +1,45 @@
+#!/usr/bin/env bpftrace
+/*
+ * syscall_count.bt - Count syscalls by process and syscall name
+ *
+ * This script demonstrates:
+ * - Multi-key maps
+ * - Getting syscall ID
+ * - Formatted output
+ *
+ * Usage: sudo bpftrace syscall_count.bt
+ */
+
+BEGIN
+{
+    printf("Tracing all syscalls... Ctrl-C for summary.\n");
+}
+
+tracepoint:raw_syscalls:sys_enter
+{
+    // Map: [process name, syscall ID] = count
+    @syscalls[comm, args->id] = count();
+}
+
+END
+{
+    printf("\n%-20s %-10s %s\n", "PROCESS", "SYSCALL", "COUNT");
+
+    // Print sorted by count
+    print(@syscalls);
+
+    // Clear map
+    clear(@syscalls);
+}
+
+/*
+ * Example output:
+ *
+ * PROCESS              SYSCALL    COUNT
+ * @syscalls[bash, 0]:  1234      # read
+ * @syscalls[bash, 1]:  567       # write
+ * @syscalls[curl, 45]: 100       # recvfrom
+ *
+ * Note: Syscall numbers are architecture-specific.
+ * On x86_64: 0=read, 1=write, 2=open, etc.
+ */

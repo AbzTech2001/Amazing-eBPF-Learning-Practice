@@ -1,0 +1,71 @@
+#!/usr/bin/env bpftrace
+/*
+ * cpu_profile.bt - CPU profiler with stack traces
+ *
+ * This demonstrates:
+ * - Profile probe (timer-based sampling)
+ * - Stack traces
+ * - User + kernel stack aggregation
+ *
+ * Usage: sudo bpftrace cpu_profile.bt
+ * Run for 10-30 seconds, then Ctrl-C
+ */
+
+BEGIN
+{
+    printf("Sampling CPU stacks at 99Hz... Ctrl-C to stop.\n");
+    printf("Run for at least 10 seconds for meaningful data.\n");
+}
+
+// Sample CPU at 99Hz (every ~10ms)
+profile:hz:99
+{
+    // Aggregate kernel + user stacks
+    @stacks[kstack, ustack, comm] = count();
+}
+
+END
+{
+    printf("\n=== Top CPU Consumers ===\n");
+
+    // Print top stacks
+    print(@stacks, 10);
+
+    clear(@stacks);
+}
+
+/*
+ * Interpreting output:
+ *
+ * The output shows call stacks ordered by sample count.
+ * Higher count = more CPU time spent there.
+ *
+ * Example:
+ *
+ * @stacks[
+ *   schedule+0x1
+ *   schedule_timeout+0x10
+ *   do_wait+0x123
+ *   kernel_wait4+0x45
+ *   ...
+ *   ,
+ *   wait+0x7
+ *   main+0x123
+ *   __libc_start_main+0xf3
+ *   ,
+ *   bash
+ * ]: 500
+ *
+ * This means bash spent 500 samples (out of total) in wait syscall.
+ *
+ * To generate flame graphs:
+ *   1. Run: sudo bpftrace cpu_profile.bt > profile.txt
+ *   2. Process output into flame graph format
+ *   3. Use flamegraph.pl to visualize
+ *
+ * Use cases:
+ * - Find CPU hotspots
+ * - Identify inefficient code paths
+ * - Debug performance issues
+ * - Compare before/after optimizations
+ */

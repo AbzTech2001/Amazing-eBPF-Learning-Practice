@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(done)",
+      "Bash(tree:*)",
+      "Bash(while read file)",
+      "Bash(do echo \"  ✓ $file\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

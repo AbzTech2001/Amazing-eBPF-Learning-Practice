@@ -1,0 +1,53 @@
+# Production eBPF Agent Configuration
+
+agent:
+  log_level: info  # debug, info, warn, error
+  export_interval: 30s
+
+features:
+  observability:
+    enabled: true
+    syscalls:
+      - execve
+      - openat
+      - connect
+      - accept
+
+  security:
+    enabled: true
+    enforce: false  # Set to true for enforcement mode
+    sensitive_paths:
+      - /etc/passwd
+      - /etc/shadow
+      - /root/.ssh/
+      - /etc/kubernetes/
+      - /var/lib/kubelet/
+
+  networking:
+    enabled: true
+    capture_dns: true
+
+filters:
+  # Filter out low PID system processes
+  min_pid: 1000
+
+  # Exclude Kubernetes system namespaces
+  exclude_namespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+
+export:
+  prometheus:
+    enabled: true
+    port: 9090
+
+  otlp:
+    enabled: false
+    endpoint: "otlp-collector:4317"
+    # For production, add TLS configuration:
+    # tls:
+    #   enabled: true
+    #   cert_file: /etc/certs/tls.crt
+    #   key_file: /etc/certs/tls.key
+    #   ca_file: /etc/certs/ca.crt

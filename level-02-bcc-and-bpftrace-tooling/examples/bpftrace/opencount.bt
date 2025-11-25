@@ -1,0 +1,25 @@
+#!/usr/bin/env bpftrace
+/*
+ * opencount.bt - Count open() syscalls by process
+ *
+ * This is the bpftrace equivalent of opencount.py (BCC version).
+ * Notice how much more concise it is!
+ *
+ * Usage: sudo bpftrace opencount.bt
+ */
+
+BEGIN
+{
+    printf("Tracing open() syscalls... Ctrl-C to stop.\n");
+}
+
+tracepoint:syscalls:sys_enter_openat
+{
+    @opens[comm] = count();
+}
+
+END
+{
+    printf("\nTop processes by open() calls:\n");
+    print(@opens);
+}

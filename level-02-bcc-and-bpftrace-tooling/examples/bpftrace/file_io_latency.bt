@@ -1,0 +1,84 @@
+#!/usr/bin/env bpftrace
+/*
+ * file_io_latency.bt - Measure file read/write latency
+ *
+ * This script demonstrates:
+ * - Timing syscalls (entry/exit pairing)
+ * - Histograms
+ * - Filtering by syscall
+ *
+ * Usage: sudo bpftrace file_io_latency.bt
+ */
+
+BEGIN
+{
+    printf("Tracing file read/write latency... Ctrl-C to stop.\n");
+}
+
+// Trace read() entry
+tracepoint:syscalls:sys_enter_read
+{
+    @start_read[tid] = nsecs;
+}
+
+// Trace read() exit
+tracepoint:syscalls:sys_exit_read
+/@start_read[tid]/
+{
+    $duration_us = (nsecs - @start_read[tid]) / 1000;
+
+    @read_latency = hist($duration_us);
+
+    delete(@start_read[tid]);
+}
+
+// Trace write() entry
+tracepoint:syscalls:sys_enter_write
+{
+    @start_write[tid] = nsecs;
+}
+
+// Trace write() exit
+tracepoint:syscalls:sys_exit_write
+/@start_write[tid]/
+{
+    $duration_us = (nsecs - @start_write[tid]) / 1000;
+
+    @write_latency = hist($duration_us);
+
+    delete(@start_write[tid]);
+}
+
+END
+{
+    printf("\n=== READ Latency Distribution (microseconds) ===\n");
+    print(@read_latency);
+
+    printf("\n=== WRITE Latency Distribution (microseconds) ===\n");
+    print(@write_latency);
+
+    // Cleanup
+    clear(@start_read);
+    clear(@start_write);
+    clear(@read_latency);
+    clear(@write_latency);
+}
+
+/*
+ * Interpreting output:
+ *
+ * @read_latency:
+ * [1, 2)      10 |@@                  |
+ * [2, 4)      50 |@@@@@@@@@@          |
+ * [4, 8)     100 |@@@@@@@@@@@@@@@@@@@@|
+ * [8, 16)     40 |@@@@@@@@            |
+ *
+ * This shows:
+ * - Most reads take 4-8 microseconds
+ * - 10 reads took 1-2 us (likely cache hits)
+ * - Distribution is normal (good!)
+ *
+ * If you see bimodal distribution (two peaks), investigate:
+ * - One peak = cache hits
+ * - Another peak = disk I/O
+ */

@@ -1,0 +1,169 @@
+┌─────────────────────────────────────────────────────────────────────┐
+│                           USER SPACE                                 │
+│                                                                       │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  User-Space Application (C/Go/Python)                        │  │
+│  │  - Loads eBPF program via bpf() syscall                      │  │
+│  │  - Creates/updates eBPF maps                                 │  │
+│  │  - Reads data from maps or ring/perf buffers                 │  │
+│  └────────────────────┬──────────────────────┬──────────────────┘  │
+│                       │                       │                      │
+│                       │ bpf() syscall         │ map operations       │
+│                       │                       │                      │
+└───────────────────────┼───────────────────────┼──────────────────────┘
+                        │                       │
+━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━━━━━━━━━━━━━━━
+                        │                       │
+┌───────────────────────┼───────────────────────┼──────────────────────┐
+│                       │                       │                       │
+│                  KERNEL SPACE                                         │
+│                       │                       │                       │
+│  ┌────────────────────▼───────────────────────▼─────────────────┐   │
+│  │                  eBPF Subsystem                               │   │
+│  │                                                                │   │
+│  │  ┌──────────────┐         ┌─────────────────────────────┐    │   │
+│  │  │ Verifier     │         │  eBPF Maps (Shared Storage) │    │   │
+│  │  │              │         │  - Hash maps                │    │   │
+│  │  │ - Safety     │         │  - Array maps               │    │   │
+│  │  │ - Bounds     │         │  - Per-CPU maps             │    │   │
+│  │  │ - Termination│         │  - Ring buffer              │    │   │
+│  │  └──────┬───────┘         └─────────▲───────────────────┘    │   │
+│  │         │                            │                        │   │
+│  │         │ Verifies                   │ Read/Write             │   │
+│  │         ▼                            │                        │   │
+│  │  ┌──────────────────────────────────┴──────────────────┐    │   │
+│  │  │         eBPF Program (Bytecode)                      │    │   │
+│  │  │         - JIT compiled to native code                │    │   │
+│  │  │         - Attached to hooks (kprobe, tracepoint, XDP)│    │   │
+│  │  └──────────────────────┬───────────────────────────────┘    │   │
+│  │                         │                                     │   │
+│  └─────────────────────────┼─────────────────────────────────────┘   │
+│                            │                                          │
+│                            │ Triggered by kernel events               │
+│                            │                                          │
+│  ┌─────────────────────────▼───────────────────────────────────┐    │
+│  │           Kernel Hooks & Event Sources                      │    │
+│  │                                                               │    │
+│  │  - System calls (e.g., sys_open, sys_read)                  │    │
+│  │  - Tracepoints (scheduler, block I/O)                       │    │
+│  │  - kprobes (any kernel function)                            │    │
+│  │  - Network hooks (XDP, tc)                                  │    │
+│  │  - LSM hooks (security)                                     │    │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+FLOW EXPLANATION:
+
+1. DEVELOPMENT PHASE
+   ┌─────────────────────────────────────────────────────────┐
+   │ Developer writes eBPF C code (*.bpf.c)                  │
+   │         ↓                                                │
+   │ clang compiles to eBPF bytecode (*.bpf.o)              │
+   │         ↓                                                │
+   │ User-space loader loads bytecode via bpf() syscall     │
+   └─────────────────────────────────────────────────────────┘
+
+2. VERIFICATION PHASE (Kernel)
+   ┌─────────────────────────────────────────────────────────┐
+   │ Verifier performs static analysis:                      │
+   │  • No infinite loops (must prove termination)           │
+   │  • No out-of-bounds memory access                       │
+   │  • No unsafe pointer dereferences                       │
+   │  • All code paths reach BPF_EXIT                        │
+   │  • Register states tracked at each instruction          │
+   │         ↓                                                │
+   │ If verification passes → proceed                        │
+   │ If verification fails → return error to user space      │
+   └─────────────────────────────────────────────────────────┘
+
+3. JIT COMPILATION & ATTACHMENT
+   ┌─────────────────────────────────────────────────────────┐
+   │ JIT compiler translates bytecode to native instructions │
+   │         ↓                                                │
+   │ Program attached to specified kernel hook               │
+   │ (e.g., tracepoint, kprobe, XDP, tc, LSM)               │
+   └─────────────────────────────────────────────────────────┘
+
+4. RUNTIME EXECUTION
+   ┌─────────────────────────────────────────────────────────┐
+   │ Kernel event occurs (syscall, network packet, etc.)     │
+   │         ↓                                                │
+   │ Attached eBPF program runs in kernel context            │
+   │         ↓                                                │
+   │ Program can:                                             │
+   │  • Read kernel data structures (via helpers)            │
+   │  • Write to eBPF maps                                   │
+   │  • Send events to ring/perf buffers                     │
+   │  • Make decisions (drop packet, allow syscall, etc.)    │
+   └─────────────────────────────────────────────────────────┘
+
+5. DATA COLLECTION (User Space)
+   ┌─────────────────────────────────────────────────────────┐
+   │ User-space application polls/reads:                      │
+   │  • eBPF maps (bpf_map_lookup_elem)                      │
+   │  • Ring buffer (bpf_ringbuf_reserve/submit)             │
+   │  • Perf buffer (perf_event_open)                        │
+   │         ↓                                                │
+   │ Data is processed, aggregated, exported to:             │
+   │  • Prometheus/Grafana                                    │
+   │  • OpenTelemetry                                         │
+   │  • Logs/alerts                                           │
+   └─────────────────────────────────────────────────────────┘
+
+
+KEY SECURITY PROPERTIES:
+
+1. SANDBOXING
+   - eBPF programs run in restricted environment
+   - Cannot call arbitrary kernel functions
+   - Can only use approved helper functions
+   - Cannot access arbitrary memory
+
+2. VERIFICATION
+   - Static analysis before execution
+   - Guarantees no crashes, no infinite loops
+   - Ensures bounded execution time
+   - Validates all memory accesses
+
+3. ISOLATION
+   - Programs cannot interfere with each other
+   - Each program has its own execution context
+   - Maps provide controlled data sharing
+
+
+COMMON PROGRAM TYPES & THEIR HOOKS:
+
+┌──────────────────────┬────────────────────────────────────────┐
+│ Program Type         │ Attachment Point / Use Case            │
+├──────────────────────┼────────────────────────────────────────┤
+│ BPF_PROG_TYPE_KPROBE │ Any kernel function (dynamic tracing)  │
+│ BPF_PROG_TYPE_TRACEPOINT│ Stable tracepoints (syscalls, sched)│
+│ BPF_PROG_TYPE_XDP    │ NIC driver (earliest packet processing)│
+│ BPF_PROG_TYPE_SCHED_CLS│ tc classifier (traffic control)     │
+│ BPF_PROG_TYPE_LSM    │ Linux Security Module hooks            │
+│ BPF_PROG_TYPE_CGROUP_SKB│ cgroup socket filtering            │
+└──────────────────────┴────────────────────────────────────────┘
+
+
+PERFORMANCE CONSIDERATIONS:
+
+- JIT compilation eliminates interpreter overhead
+- eBPF programs run in kernel → no context switches
+- Maps use efficient data structures (hash, per-CPU)
+- Ring buffers provide lock-free event streaming
+- Verifier ensures no unbounded operations
+
+OVERHEAD SOURCES:
+
+- Frequent events (high syscall/packet rate)
+- Large data collection per event
+- Complex processing in eBPF program
+- Map lookups/updates
+- Data copying to user space
+
+MITIGATION STRATEGIES (covered in later levels):
+- Sampling (collect only 1/N events)
+- Aggregation in kernel (use maps to summarize)
+- Rate limiting
+- Efficient buffer sizing

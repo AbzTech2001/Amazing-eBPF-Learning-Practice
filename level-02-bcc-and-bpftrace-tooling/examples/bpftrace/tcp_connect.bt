@@ -1,0 +1,59 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcp_connect.bt - Trace TCP active connections
+ *
+ * This demonstrates:
+ * - Kprobes on kernel functions
+ * - Reading kernel data structures
+ * - Network address formatting
+ *
+ * Usage: sudo bpftrace tcp_connect.bt
+ */
+
+#include <net/sock.h>
+
+BEGIN
+{
+    printf("Tracing TCP connect()... Ctrl-C to stop.\n");
+    printf("%-8s %-16s %-6s %-20s %-6s\n",
+           "PID", "COMM", "AF", "DEST", "PORT");
+}
+
+kprobe:tcp_connect
+{
+    $sk = (struct sock *)arg0;
+    $family = $sk->__sk_common.skc_family;
+
+    // Only trace IPv4 for simplicity
+    if ($family == AF_INET) {
+        $daddr = $sk->__sk_common.skc_daddr;
+        $dport = $sk->__sk_common.skc_dport;
+
+        // Convert port from network byte order
+        $dport = ($dport >> 8) | (($dport << 8) & 0xff00);
+
+        printf("%-8d %-16s %-6s %-20s %-6d\n",
+               pid,
+               comm,
+               "IPv4",
+               ntop(AF_INET, $daddr),
+               $dport);
+    }
+}
+
+/*
+ * Example output:
+ *
+ * PID      COMM             AF     DEST                 PORT
+ * 1234     curl             IPv4   93.184.216.34        80
+ * 5678     ssh              IPv4   192.168.1.100        22
+ *
+ * To test:
+ *   curl http://example.com
+ *   ssh user@remote-host
+ *
+ * Notes:
+ * - tcp_connect is called for ACTIVE connections (client-initiated)
+ * - For passive (server accept), use tcp_accept kprobe
+ * - IPv6 support can be added with AF_INET6 check
+ */

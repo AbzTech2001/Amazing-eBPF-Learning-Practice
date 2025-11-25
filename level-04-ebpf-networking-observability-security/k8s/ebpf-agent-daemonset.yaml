@@ -1,0 +1,277 @@
+---
+# ServiceAccount for eBPF agent
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ebpf-agent
+  namespace: kube-system
+
+---
+# ClusterRole with necessary permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ebpf-agent
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ebpf-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ebpf-agent
+subjects:
+- kind: ServiceAccount
+  name: ebpf-agent
+  namespace: kube-system
+
+---
+# DaemonSet - runs on every node
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ebpf-agent
+  namespace: kube-system
+  labels:
+    app: ebpf-agent
+spec:
+  selector:
+    matchLabels:
+      app: ebpf-agent
+  template:
+    metadata:
+      labels:
+        app: ebpf-agent
+    spec:
+      serviceAccountName: ebpf-agent
+      hostNetwork: true  # Access host network
+      hostPID: true      # Access host processes
+      tolerations:
+      # Run on control plane nodes too
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+
+      initContainers:
+      # Ensure BPF filesystem is mounted
+      - name: bpf-mount
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          if ! mount | grep -q /sys/fs/bpf; then
+            mount -t bpf none /sys/fs/bpf
+          fi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: bpffs
+          mountPath: /sys/fs/bpf
+          mountPropagation: Bidirectional
+
+      containers:
+      - name: ebpf-agent
+        image: your-registry/ebpf-agent:latest
+        imagePullPolicy: Always
+
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        securityContext:
+          privileged: true  # Required for eBPF
+          capabilities:
+            add:
+            - SYS_ADMIN     # Load eBPF programs
+            - SYS_RESOURCE  # Increase limits
+            - NET_ADMIN     # XDP/tc attachment
+            - BPF           # BPF operations (kernel 5.8+)
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        volumeMounts:
+        # BPF filesystem
+        - name: bpffs
+          mountPath: /sys/fs/bpf
+          mountPropagation: Bidirectional
+
+        # Kernel debug (for trace_pipe)
+        - name: debugfs
+          mountPath: /sys/kernel/debug
+          readOnly: true
+
+        # Host /proc
+        - name: proc
+          mountPath: /host/proc
+          readOnly: true
+
+        # Cgroup filesystem
+        - name: cgroup
+          mountPath: /sys/fs/cgroup
+          readOnly: true
+
+        # Container runtime socket (for metadata)
+        - name: containerd-sock
+          mountPath: /run/containerd/containerd.sock
+          readOnly: true
+
+        # Config
+        - name: config
+          mountPath: /etc/ebpf-agent
+
+      volumes:
+      - name: bpffs
+        hostPath:
+          path: /sys/fs/bpf
+          type: DirectoryOrCreate
+
+      - name: debugfs
+        hostPath:
+          path: /sys/kernel/debug
+          type: Directory
+
+      - name: proc
+        hostPath:
+          path: /proc
+          type: Directory
+
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+          type: Directory
+
+      - name: containerd-sock
+        hostPath:
+          path: /run/containerd/containerd.sock
+          type: Socket
+
+      - name: config
+        configMap:
+          name: ebpf-agent-config
+          optional: true
+
+---
+# ConfigMap for agent configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ebpf-agent-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    # eBPF Agent Configuration
+
+    # Tracing configuration
+    tracing:
+      enabled: true
+      min_pid: 1000  # Skip system processes
+
+    # Network monitoring
+    network:
+      enabled: true
+      capture_dns: true
+
+    # Security monitoring
+    security:
+      enabled: true
+      sensitive_paths:
+      - /etc/passwd
+      - /etc/shadow
+      - /root/.ssh/
+
+    # Export configuration
+    export:
+      prometheus:
+        enabled: true
+        port: 9090
+      otlp:
+        enabled: false
+        endpoint: "otlp-collector:4317"
+
+---
+# Service for Prometheus scraping
+apiVersion: v1
+kind: Service
+metadata:
+  name: ebpf-agent-metrics
+  namespace: kube-system
+  labels:
+    app: ebpf-agent
+spec:
+  clusterIP: None  # Headless service
+  selector:
+    app: ebpf-agent
+  ports:
+  - name: metrics
+    port: 9090
+    protocol: TCP
+
+---
+# ServiceMonitor for Prometheus Operator (optional)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ebpf-agent
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: ebpf-agent
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+
+#
+# Deployment Instructions:
+#
+# 1. Build and push your eBPF agent image:
+#    docker build -t your-registry/ebpf-agent:latest .
+#    docker push your-registry/ebpf-agent:latest
+#
+# 2. Update image reference above
+#
+# 3. Apply manifests:
+#    kubectl apply -f ebpf-agent-daemonset.yaml
+#
+# 4. Verify deployment:
+#    kubectl get daemonset -n kube-system ebpf-agent
+#    kubectl get pods -n kube-system -l app=ebpf-agent
+#
+# 5. Check logs:
+#    kubectl logs -n kube-system -l app=ebpf-agent --tail=100
+#
+# 6. Access metrics:
+#    kubectl port-forward -n kube-system svc/ebpf-agent-metrics 9090:9090
+#    curl localhost:9090/metrics
+#
