@@ -1,0 +1,50 @@
+MIT License
+
+Copyright (c) 2024 Amazing eBPF Learning & Practice Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ADDITIONAL LICENSING NOTES:
+
+1. eBPF Programs (\*.bpf.c files):
+   Individual eBPF kernel-space programs in this repository use GPL-2.0 license
+   as required by the Linux kernel. These files are clearly marked with:
+
+   // SPDX-License-Identifier: GPL-2.0
+
+   This dual-licensing approach is standard in eBPF projects because:
+
+   - eBPF programs that run in kernel space must be GPL-compatible
+   - User-space loaders and tooling can use more permissive licenses
+
+2. User-Space Code and Documentation:
+   All user-space code (loaders, applications), documentation, and build
+   systems remain under MIT license as specified above.
+
+3. Third-Party Dependencies:
+   This project uses various dependencies with their own licenses:
+
+   - libbpf: LGPL-2.1 OR BSD-2-Clause
+   - BCC: Apache-2.0
+   - Cilium eBPF Go library: Apache-2.0
+   - Linux kernel headers: GPL-2.0
+
+   Please review their respective licenses when using or redistributing.

@@ -88,27 +88,32 @@ MASTERY: Design and build production eBPF systems
 ## What You'll Build
 
 ### Level 01 Projects
+
 - ✓ Minimal tracepoint program with loader
 - ✓ BTF exploration tools
 - ✓ Kernel feature detection scripts
 
 ### Level 02 Projects
+
 - ✓ Custom BCC scripts for syscall/network tracing
 - ✓ bpftrace one-liners for performance analysis
 - ✓ Latency measurement tools
 
 ### Level 03 Projects
+
 - ✓ Portable libbpf programs with CO-RE
 - ✓ Ring buffer event streaming
 - ✓ Production-ready packages
 
 ### Level 04 Projects
+
 - ✓ XDP packet filter / load balancer
 - ✓ Prometheus exporter with Grafana dashboard
 - ✓ LSM-based security monitor
 - ✓ Kubernetes DaemonSet deployment
 
 ### Level 05 Projects (Planned)
+
 - ✓ Complete observability/security agent
 - ✓ Multi-component system with CI/CD
 - ✓ Performance-tuned production deployment
@@ -171,23 +176,27 @@ EBPF/
 ### Each Level Includes:
 
 1. **Comprehensive README**
+
    - Clear learning objectives
    - 10-15 practical tasks
    - 5-8 real-world challenges
    - Production patterns
 
 2. **Working Code**
+
    - Real, tested examples (not pseudocode)
    - Build systems (Makefiles)
    - Complete programs you can run
 
 3. **In-Depth Documentation**
+
    - Deep dives into concepts
    - Architecture explanations
    - Decision guides
    - Best practices
 
 4. **Interactive Labs**
+
    - Guided hands-on exercises
    - Step-by-step walkthroughs
    - Immediate feedback
@@ -203,28 +212,34 @@ EBPF/
 ## Pedagogical Principles
 
 ### 1. Production-Oriented
+
 Every concept is tied to real-world use cases. Learn patterns used by:
+
 - **Cilium/Hubble**: Network observability
 - **Tetragon/Falco**: Security monitoring
 - **Pixie/Parca**: Continuous profiling
 - **Katran**: Load balancing
 
 ### 2. Hands-On First
+
 - Run code before deep theory
 - See it working, then understand why
 - Immediate feedback loop
 
 ### 3. Systematic Progression
+
 - Each level builds on previous knowledge
 - No gaps in understanding
 - Smooth learning curve
 
 ### 4. Troubleshooting Emphasis
+
 - Challenges force real debugging
 - Learn to fix common issues
 - Build production resilience
 
 ### 5. No Hand-Waving
+
 - Real commands, real output
 - Complete build systems
 - Production-ready patterns
@@ -234,11 +249,13 @@ Every concept is tied to real-world use cases. Learn patterns used by:
 ## Prerequisites
 
 ### Hardware
+
 - x86_64 or ARM64 Linux system
 - 4GB+ RAM (8GB recommended)
 - 20GB+ free disk space
 
 ### Software
+
 - Linux kernel 5.10+ (recommended)
   - Minimum 4.18 for basic features
   - 5.10 LTS for full experience
@@ -246,7 +263,9 @@ Every concept is tied to real-world use cases. Learn patterns used by:
 - Root access (or sudo)
 
 ### Skills
+
 - **Required**:
+
   - Basic Linux command line
   - Understanding of C programming
   - Familiarity with systems programming concepts
@@ -257,6 +276,7 @@ Every concept is tied to real-world use cases. Learn patterns used by:
   - Go or Python
 
 ### Time Commitment
+
 - **Casual**: 5-10 hours/week → 4-6 months
 - **Focused**: 15-20 hours/week → 2-3 months
 - **Intensive**: 30+ hours/week → 1-2 months
@@ -266,11 +286,9 @@ Every concept is tied to real-world use cases. Learn patterns used by:
 ## Quick Start
 
 ### 1. Clone Repository
-```bash
-cd ~/development/git/abz/EBPF
-```
 
 ### 2. Start Level 01
+
 ```bash
 cd level-01-linux-and-ebpf-foundations/
 
@@ -287,13 +305,16 @@ cd lab/
 ```
 
 ### 3. Work Through Systematically
+
 - Complete all tasks in order
 - Don't skip challenges
 - Take notes on gotchas
 - Build your own examples
 
 ### 4. Track Progress
+
 Create a learning journal:
+
 ```bash
 # Example journal.md
 ## Level 01
@@ -308,19 +329,23 @@ Create a learning journal:
 ## Getting Help
 
 ### Built-in Resources
+
 Each level includes:
+
 - Detailed documentation
 - Working examples
 - Troubleshooting guides
 - References to official docs
 
 ### External Resources
+
 - [eBPF.io](https://ebpf.io/) - Official eBPF site
 - [Cilium Docs](https://docs.cilium.io/en/stable/bpf/) - Excellent BPF reference
 - [Kernel BPF Docs](https://www.kernel.org/doc/html/latest/bpf/) - Official kernel docs
 - [libbpf GitHub](https://github.com/libbpf/libbpf) - libbpf source and examples
 
 ### Community
+
 - [eBPF Slack](https://ebpf.io/slack) - Active community
 - [Cilium Slack](https://cilium.io/slack) - Cilium-specific help
 - Stack Overflow: [ebpf] tag
@@ -330,30 +355,35 @@ Each level includes:
 ## Success Criteria
 
 ### Level 01 Complete
+
 - [ ] Can explain eBPF VM, verifier, JIT
 - [ ] Comfortable with bpftool inspection
 - [ ] Understand BTF and CO-RE concepts
 - [ ] Loaded and debugged a basic program
 
 ### Level 02 Complete
+
 - [ ] Used 10+ BCC tools effectively
 - [ ] Written custom BCC/bpftrace scripts
 - [ ] Understand tool overhead and optimization
 - [ ] Know when to use which tool
 
 ### Level 03 Complete
+
 - [ ] Written portable libbpf programs
 - [ ] Debugged complex verifier errors
 - [ ] Used ring buffers for event streaming
 - [ ] Packaged programs for distribution
 
 ### Level 04 Complete
+
 - [ ] Built XDP packet processors
 - [ ] Integrated eBPF with observability stacks
 - [ ] Implemented security policies with LSM
 - [ ] Deployed to Kubernetes
 
 ### Level 05 Complete (Planned)
+
 - [ ] Built production-ready agent
 - [ ] Implemented CI/CD pipeline
 - [ ] Tuned for production performance
@@ -381,6 +411,7 @@ By completing this curriculum, you will be able to:
 ## Career Outcomes
 
 ### Roles You'll Be Ready For
+
 - eBPF Engineer
 - Observability Engineer
 - Cloud Native Platform Engineer
@@ -389,6 +420,7 @@ By completing this curriculum, you will be able to:
 - Performance Engineer
 
 ### Companies Using eBPF
+
 - **Networking**: Cilium, Isovalent, Cloudflare
 - **Observability**: Datadog, New Relic, Grafana Labs
 - **Security**: Aqua Security, Sysdig, Falco
@@ -425,12 +457,14 @@ cd lab/
 ```
 
 ### Stay Consistent
+
 - Set regular learning time (e.g., 2 hours/day)
 - Complete one level before moving to next
 - Don't skip challenges - they build crucial skills
 - Build your own projects alongside curriculum
 
 ### Track Progress
+
 - Keep a learning journal
 - Share what you learn (blog, Twitter, etc.)
 - Contribute back (PRs welcome!)
